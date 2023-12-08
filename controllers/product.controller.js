@@ -1,7 +1,7 @@
 const ProductsCollection = require("../models/Products");
 
 const getAllProducts = async (req, res) => {
-  const { featured, company, name } = req.query;
+  const { featured, company, name, sort } = req.query;
   const queryObject = {};
 
   // Use this condition to confirm that the key, 'feature' exist before sorting
@@ -14,8 +14,21 @@ const getAllProducts = async (req, res) => {
   if (name) {
     queryObject.name = { $regex: name, $options: "i" }; // This object value is to make sure that whatever letters are typed, it displays product names with those letters where "i" means, case insensitivity
   }
+
   // console.log(queryObject);
-  const products = await ProductsCollection.find(queryObject);
+  let result = ProductsCollection.find(queryObject);
+
+  // Sorting based on what was typed in the sort query
+  if (sort) {
+    const sortList = sort.split(",").join(" ");
+    // console.log(sortList);
+    result = result.sort(sortList);
+  } else {
+    // If sort query does not exist, this should run instead
+    result = result.sort("createdAt");
+  }
+  const products = await result;
+
   res.status(200).json({
     success: true,
     nbHits: products.length,
