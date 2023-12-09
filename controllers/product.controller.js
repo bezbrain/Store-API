@@ -1,7 +1,7 @@
 const ProductsCollection = require("../models/Products");
 
 const getAllProducts = async (req, res) => {
-  const { featured, company, name, sort, fields } = req.query;
+  const { featured, company, name, sort, fields, numericFilters } = req.query;
   const queryObject = {};
 
   // Use this condition to confirm that the key, 'feature' exist before sorting
@@ -15,7 +15,30 @@ const getAllProducts = async (req, res) => {
     queryObject.name = { $regex: name, $options: "i" }; // This object value is to make sure that whatever letters are typed, it displays product names with those letters where "i" means, case insensitivity
   }
 
-  // console.log(queryObject);
+  // Filtering by number. That is, picking products less or greater than a certain number
+  if (numericFilters) {
+    const operatorMap = {
+      ">": "$gt",
+      ">=": "$gte",
+      "=": "$eq",
+      "<": "$lt",
+      "<=": "$lte",
+    };
+    const regEx = /\b(<|>|>=|=|<|<=)\b/g;
+    let filters = numericFilters.replace(
+      regEx,
+      (match) => `-${operatorMap[match]}-`
+    );
+    const options = ["price", "rating"];
+    filters = filters.split(",").forEach((item) => {
+      const [field, operator, value] = item.split("-");
+      if (options.includes(field)) {
+        queryObject[field] = { [operator]: parseInt(value) };
+      }
+    });
+  }
+
+  console.log(queryObject);
   let result = ProductsCollection.find(queryObject);
 
   // Sorting based on what was typed in the sort query
@@ -34,6 +57,13 @@ const getAllProducts = async (req, res) => {
     // console.log(sortList);
     result = result.select(fieldsList);
   }
+
+  // Handling pagination
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  result = result.skip(skip).limit(limit);
 
   const products = await result;
 
