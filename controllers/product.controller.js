@@ -1,7 +1,7 @@
 const ProductsCollection = require("../models/Products");
 
 const getAllProducts = async (req, res) => {
-  const { featured, company, name, sort } = req.query;
+  const { featured, company, name, sort, fields } = req.query;
   const queryObject = {};
 
   // Use this condition to confirm that the key, 'feature' exist before sorting
@@ -27,6 +27,14 @@ const getAllProducts = async (req, res) => {
     // If sort query does not exist, this should run instead
     result = result.sort("createdAt");
   }
+
+  // Selecting a particular keys from the whole model
+  if (fields) {
+    const fieldsList = fields.split(",").join(" ");
+    // console.log(sortList);
+    result = result.select(fieldsList);
+  }
+
   const products = await result;
 
   res.status(200).json({
